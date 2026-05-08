@@ -1,81 +1,62 @@
-﻿# AgentIR: Agent-Assisted Incident Response with RAG
+﻿# AgentIR: Incident Response RAG Prototype
 
-AgentIR is a Python-based incident response prototype that demonstrates how a retrieval-augmented generation (RAG) workflow can support analyst triage.
+AgentIR is a Python incident response prototype that uses retrieval-augmented generation (RAG) over local playbooks.
 
-The project ingests analyst questions, retrieves relevant response playbooks from a local corpus using embedding-based semantic search, ranks response procedures by similarity, and uses the OpenAI API to generate grounded incident summaries and triage recommendations.
+The current pipeline:
+- loads local IR documentation from `rag/corpus`
+- chunks and embeds documents
+- retrieves top-k relevant chunks with FAISS
+- injects a fixture alert JSON into the prompt
+- generates a grounded answer (or prints a prompt preview when no API key is set)
 
-This repository is a public sample of the current project intended to show the core architecture and implementation approach.
+## Current Scope
 
-## Why This Repo Is Only a Sample
-
-This repository is intentionally limited to a sanitized public prototype.
-
-The full project is developed beyond this baseline and includes more advanced orchestration logic, expanded evaluation workflows, and product-oriented incident response features. To avoid exposing proprietary implementation details or future project components, only the core sample pipeline is published here.
-
-## What This Prototype Demonstrates
-
-- AI agent-assisted incident response workflow for analyst-facing triage support
-- Retrieval-augmented generation (RAG) for playbook lookup and context injection
-- Playbook-based chunking for cleaner retrieval than fixed character-only chunking
-- Embedding-based semantic search over incident response procedures
-- OpenAI API integration for grounded response synthesis
-- Local, reproducible baseline implementation in Python
-
-## Scope
-
-- Ingest a local markdown corpus of incident response playbooks
-- Chunk playbooks by markdown section (`## ...`) or by fixed characters
-- Generate embeddings for playbook chunks and analyst queries
-- Rank chunks using cosine similarity
-- Build a grounded prompt from the top-k retrieved chunks
-- Generate a response using the OpenAI API, or print the prompt if no API key is configured
-
-The included corpus covers:
-
-- Phishing
-- Impossible travel
-- Malware beaconing
+- Minimal single-query CLI workflow
+- Local corpus support for `.rst`, `.md`, and `.txt`
+- Embedding-based semantic retrieval (`BAAI/bge-small-en-v1.5` by default)
+- LangChain-based retrieval and generation orchestration
+- Hardcoded alert-context injection from `tests/fixtures/impossible_travel_alert.json`
 
 ## Project Structure
 
-- `scripts/IR_rag.py`: main sample RAG pipeline
-- `scripts/phase0_rag.py`: earlier baseline version
-- `rag/corpus/playbook_response.md`: sample incident response corpus
+- `scripts/IR_rag.py`: main minimal RAG pipeline
+- `rag/corpus/`: incident response corpus documents
+- `tests/fixtures/`: sample alert JSON fixtures
 - `.env`: local environment file for credentials (not committed)
 - `requirements.txt`: Python dependencies
 
 ## Setup
 
-Install dependencies from the project root:
+From project root:
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-Create a local `.env` file in the project root:
+Create `.env` in project root:
 
 ```env
-PUT YOUR KEY HERE
+OPENAI_API_KEY=your_key_here
 ```
 
-`.env` is excluded from version control and should never be committed.
+If `OPENAI_API_KEY` is missing, the script skips model generation and prints a prompt preview.
 
 ## Run
 
-From the project root:
+From project root:
 
 ```powershell
-python scripts/IR_rag.py --query "What should I do after an impossible travel alert?"
+python scripts/IR_rag.py --query "What should we do first for a ransomware incident?"
 ```
 
-From the `scripts` directory:
+Common options:
 
 ```powershell
-python IR_rag.py --query "What should I do after an impossible travel alert?"
+python scripts/IR_rag.py --query "..." --corpus rag/corpus --k 5 --chunk-size 700 --embedding-model BAAI/bge-small-en-v1.5
 ```
 
-Optional: use fixed-size character chunking instead of playbook-based chunking:
+## Notes
 
-```powershell
-python scripts/IR_rag.py --chunk-mode char --query "What should I do after an impossible travel alert?"
-```
+- Retrieval scores shown in output are a simple transformed value from FAISS distance (`1 / (1 + distance)`) for readability.
+- Alert JSON context is currently hardcoded in `scripts/IR_rag.py` via:
+  - `ALERT_FIXTURE_PATH = Path(r"tests\\fixtures\\impossible_travel_alert.json")`
