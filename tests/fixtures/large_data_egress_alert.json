@@ -1,0 +1,32 @@
+﻿{
+    "entities":  [
+                     {
+                         "value":  "rpatel@company.com",
+                         "type":  "user"
+                     },
+                     {
+                         "value":  "RND-LT-884",
+                         "type":  "host"
+                     },
+                     {
+                         "value":  "fileshare-drop.io",
+                         "type":  "domain"
+                     }
+                 ],
+    "timestamp":  "2026-05-08T11:42:00Z",
+    "title":  "Large encrypted archive uploaded to unsanctioned file host",
+    "source":  "dlp",
+    "severity":  "critical",
+    "evidence":  [
+                     {
+                         "indicator":  "upload_size",
+                         "description":  "18.4 GB outbound transfer"
+                     },
+                     {
+                         "indicator":  "archive_activity",
+                         "description":  "7zip archive created immediately prior to upload"
+                     }
+                 ],
+    "alert_id":  "ALRT-2009",
+    "alert_type":  "data_exfiltration"
+}

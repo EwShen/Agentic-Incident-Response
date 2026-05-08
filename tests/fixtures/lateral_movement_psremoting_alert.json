@@ -1,0 +1,32 @@
+﻿{
+    "entities":  [
+                     {
+                         "value":  "svc-admin@company.com",
+                         "type":  "user"
+                     },
+                     {
+                         "value":  "DC-02",
+                         "type":  "host"
+                     },
+                     {
+                         "value":  "APP-17",
+                         "type":  "host"
+                     }
+                 ],
+    "timestamp":  "2026-05-08T10:49:00Z",
+    "title":  "Privileged account initiated unusual PSRemoting fan-out",
+    "source":  "siem-correlation",
+    "severity":  "critical",
+    "evidence":  [
+                     {
+                         "indicator":  "remote_exec",
+                         "description":  "PSRemoting to 14 hosts in 9 minutes"
+                     },
+                     {
+                         "indicator":  "credential_use",
+                         "description":  "Service account used outside maintenance window"
+                     }
+                 ],
+    "alert_id":  "ALRT-2006",
+    "alert_type":  "lateral_movement"
+}

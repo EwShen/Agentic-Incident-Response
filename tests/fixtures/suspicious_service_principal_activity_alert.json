@@ -1,0 +1,32 @@
+﻿{
+    "entities":  [
+                     {
+                         "value":  "spn-ci-deploy",
+                         "type":  "service_principal"
+                     },
+                     {
+                         "value":  "kv-prod-secrets",
+                         "type":  "vault"
+                     },
+                     {
+                         "value":  "rg-prod-core",
+                         "type":  "resource_group"
+                     }
+                 ],
+    "timestamp":  "2026-05-08T12:33:00Z",
+    "title":  "Service principal performed atypical key vault secret reads",
+    "source":  "azure-activity",
+    "severity":  "medium",
+    "evidence":  [
+                     {
+                         "indicator":  "access_pattern",
+                         "description":  "Secret reads 14x above baseline"
+                     },
+                     {
+                         "indicator":  "source_ip",
+                         "description":  "Requests originated from non-CI network"
+                     }
+                 ],
+    "alert_id":  "ALRT-2012",
+    "alert_type":  "service_identity_abuse"
+}

@@ -1,0 +1,32 @@
+﻿{
+    "entities":  [
+                     {
+                         "value":  "FIN-FS-01",
+                         "type":  "host"
+                     },
+                     {
+                         "value":  "\\\\fin-fs-01\\accounts",
+                         "type":  "share"
+                     },
+                     {
+                         "value":  "lee@company.com",
+                         "type":  "user"
+                     }
+                 ],
+    "timestamp":  "2026-05-08T11:03:00Z",
+    "title":  "Rapid file rename and extension changes on shared drive",
+    "source":  "edr",
+    "severity":  "critical",
+    "evidence":  [
+                     {
+                         "indicator":  "file_ops",
+                         "description":  "6200 rename operations in 11 minutes"
+                     },
+                     {
+                         "indicator":  "ransom_note",
+                         "description":  "README_RECOVER.txt created in multiple folders"
+                     }
+                 ],
+    "alert_id":  "ALRT-2007",
+    "alert_type":  "ransomware_behavior"
+}

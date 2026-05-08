@@ -1,0 +1,32 @@
+﻿{
+    "entities":  [
+                     {
+                         "value":  "northstar-customer-exports",
+                         "type":  "bucket"
+                     },
+                     {
+                         "value":  "aws-prod-01",
+                         "type":  "account"
+                     },
+                     {
+                         "value":  "terraform-bot",
+                         "type":  "user"
+                     }
+                 ],
+    "timestamp":  "2026-05-08T10:31:00Z",
+    "title":  "Storage bucket switched from private to public-read",
+    "source":  "cspm",
+    "severity":  "high",
+    "evidence":  [
+                     {
+                         "indicator":  "acl_change",
+                         "description":  "ACL updated to public-read"
+                     },
+                     {
+                         "indicator":  "object_count",
+                         "description":  "2431 objects potentially exposed"
+                     }
+                 ],
+    "alert_id":  "ALRT-2005",
+    "alert_type":  "cloud_misconfiguration"
+}

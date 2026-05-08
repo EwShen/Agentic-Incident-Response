@@ -1,0 +1,17 @@
+﻿{
+  "alert_id": "ALRT-1001",
+  "source": "mock-siem",
+  "alert_type": "phishing",
+  "title": "Suspicious inbound email with credential harvesting URL",
+  "severity": "high",
+  "timestamp": "2026-04-15T09:15:00Z",
+  "entities": [
+    {"type": "user", "value": "alex@company.com"},
+    {"type": "email", "value": "security-notice@spoofed.example"},
+    {"type": "host", "value": "laptop-22"}
+  ],
+  "evidence": [
+    {"indicator": "url", "description": "http://account-verify-example.tld/login"},
+    {"indicator": "subject", "description": "Action Required: Password Expiring"}
+  ]
+}

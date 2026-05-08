@@ -1,0 +1,32 @@
+﻿{
+    "entities":  [
+                     {
+                         "value":  "ap@company.com",
+                         "type":  "user"
+                     },
+                     {
+                         "value":  "acct.review@protonmail.com",
+                         "type":  "email"
+                     },
+                     {
+                         "value":  "ap@company.com",
+                         "type":  "mailbox"
+                     }
+                 ],
+    "timestamp":  "2026-05-08T11:18:00Z",
+    "title":  "Mailbox forwarding rule created to external address",
+    "source":  "m365-defender",
+    "severity":  "high",
+    "evidence":  [
+                     {
+                         "indicator":  "inbox_rule",
+                         "description":  "Auto-forward for invoices and payment terms"
+                     },
+                     {
+                         "indicator":  "sign_in",
+                         "description":  "Recent login from unfamiliar ASN"
+                     }
+                 ],
+    "alert_id":  "ALRT-2008",
+    "alert_type":  "bec_indicator"
+}

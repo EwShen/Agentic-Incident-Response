@@ -1,0 +1,17 @@
+﻿{
+  "alert_id": "ALRT-1002",
+  "source": "idp-analytics",
+  "alert_type": "impossible_travel",
+  "title": "User signed in from US and Germany within 8 minutes",
+  "severity": "medium",
+  "timestamp": "2026-04-15T10:35:00Z",
+  "entities": [
+    {"type": "user", "value": "sam@company.com"},
+    {"type": "ip", "value": "198.51.100.25"},
+    {"type": "ip", "value": "203.0.113.17"}
+  ],
+  "evidence": [
+    {"indicator": "mfa", "description": "MFA succeeded for second sign-in"},
+    {"indicator": "user_agent", "description": "Different browser signatures across events"}
+  ]
+}

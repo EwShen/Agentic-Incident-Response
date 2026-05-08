@@ -1,0 +1,32 @@
+﻿{
+    "entities":  [
+                     {
+                         "value":  "admin.ops@company.com",
+                         "type":  "user"
+                     },
+                     {
+                         "value":  "198.51.100.88",
+                         "type":  "ip"
+                     },
+                     {
+                         "value":  "203.0.113.211",
+                         "type":  "ip"
+                     }
+                 ],
+    "timestamp":  "2026-05-08T12:01:00Z",
+    "title":  "Privileged admin logged in from Canada and Singapore within 12 minutes",
+    "source":  "idp-analytics",
+    "severity":  "high",
+    "evidence":  [
+                     {
+                         "indicator":  "mfa",
+                         "description":  "MFA approved on both sign-ins"
+                     },
+                     {
+                         "indicator":  "device",
+                         "description":  "Different device IDs observed"
+                     }
+                 ],
+    "alert_id":  "ALRT-2010",
+    "alert_type":  "impossible_travel"
+}

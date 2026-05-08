@@ -1,0 +1,32 @@
+﻿{
+    "entities":  [
+                     {
+                         "value":  "kevin@company.com",
+                         "type":  "user"
+                     },
+                     {
+                         "value":  "QuickInvoice Sync",
+                         "type":  "app"
+                     },
+                     {
+                         "value":  "corp-tenant",
+                         "type":  "tenant"
+                     }
+                 ],
+    "timestamp":  "2026-05-08T09:40:00Z",
+    "title":  "User granted high-risk mail read/write OAuth permissions",
+    "source":  "m365-defender",
+    "severity":  "high",
+    "evidence":  [
+                     {
+                         "indicator":  "oauth_scope",
+                         "description":  "Mail.ReadWrite, Files.ReadWrite.All granted"
+                     },
+                     {
+                         "indicator":  "app_reputation",
+                         "description":  "Application not previously seen in tenant"
+                     }
+                 ],
+    "alert_id":  "ALRT-2002",
+    "alert_type":  "suspicious_oauth_consent"
+}

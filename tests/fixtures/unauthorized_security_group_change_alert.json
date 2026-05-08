@@ -1,0 +1,32 @@
+﻿{
+    "entities":  [
+                     {
+                         "value":  "sg-07ab4cd98ef1201",
+                         "type":  "security_group"
+                     },
+                     {
+                         "value":  "aws-prod-01",
+                         "type":  "account"
+                     },
+                     {
+                         "value":  "unknown-temp-user",
+                         "type":  "user"
+                     }
+                 ],
+    "timestamp":  "2026-05-08T12:17:00Z",
+    "title":  "Security group opened SSH to world on production subnet",
+    "source":  "cloudtrail-monitor",
+    "severity":  "high",
+    "evidence":  [
+                     {
+                         "indicator":  "rule_change",
+                         "description":  "Ingress 0.0.0.0/0 -\u003e tcp/22"
+                     },
+                     {
+                         "indicator":  "identity",
+                         "description":  "API key with no mapped owner"
+                     }
+                 ],
+    "alert_id":  "ALRT-2011",
+    "alert_type":  "unauthorized_change"
+}

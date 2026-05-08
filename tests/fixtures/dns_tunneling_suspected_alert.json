@@ -1,0 +1,32 @@
+﻿{
+    "entities":  [
+                     {
+                         "value":  "ENG-WS-121",
+                         "type":  "host"
+                     },
+                     {
+                         "value":  "sync-data-updates.net",
+                         "type":  "domain"
+                     },
+                     {
+                         "value":  "10.22.7.44",
+                         "type":  "ip"
+                     }
+                 ],
+    "timestamp":  "2026-05-08T10:22:00Z",
+    "title":  "High-volume TXT queries with long randomized subdomains",
+    "source":  "network-ids",
+    "severity":  "medium",
+    "evidence":  [
+                     {
+                         "indicator":  "dns_pattern",
+                         "description":  "Consistent 58-char subdomain labels"
+                     },
+                     {
+                         "indicator":  "query_rate",
+                         "description":  "1840 queries over 20 minutes"
+                     }
+                 ],
+    "alert_id":  "ALRT-2004",
+    "alert_type":  "dns_tunneling"
+}

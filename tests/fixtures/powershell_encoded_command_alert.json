@@ -1,0 +1,32 @@
+﻿{
+    "entities":  [
+                     {
+                         "value":  "WIN-LT-4471",
+                         "type":  "host"
+                     },
+                     {
+                         "value":  "jordan@company.com",
+                         "type":  "user"
+                     },
+                     {
+                         "value":  "powershell.exe",
+                         "type":  "process"
+                     }
+                 ],
+    "timestamp":  "2026-05-08T10:05:00Z",
+    "title":  "Encoded PowerShell launched from Office child process",
+    "source":  "edr",
+    "severity":  "high",
+    "evidence":  [
+                     {
+                         "indicator":  "process_tree",
+                         "description":  "winword.exe -\u003e powershell.exe -enc ..."
+                     },
+                     {
+                         "indicator":  "network",
+                         "description":  "Outbound connection to rare domain observed"
+                     }
+                 ],
+    "alert_id":  "ALRT-2003",
+    "alert_type":  "malware_execution"
+}
