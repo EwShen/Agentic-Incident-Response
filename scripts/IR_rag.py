@@ -1,193 +1,199 @@
 ﻿import argparse
-import math
+import json
 import os
+import sys
 from pathlib import Path
-from typing import List, Sequence, Tuple
 
-import numpy as np
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.documents import Document
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_community.vectorstores import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import ChatOpenAI
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+ALERT_FIXTURE_PATH = Path(r"tests\fixtures\impossible_travel_alert.json")
 
 
-def read_text_file(file_path: Path) -> str:
-    return file_path.read_text(encoding="utf-8")
+# Load project-level .env if present
+def load_env() -> None:
 
-
-def load_project_env() -> None:
     project_root = Path(__file__).resolve().parents[1]
     env_file = project_root / ".env"
+
     if env_file.exists():
-        load_dotenv(dotenv_path=env_file)
+        load_dotenv(env_file)
 
 
-def chunk_text(text: str, chunk_size: int) -> List[str]:
-    return [text[i : i + chunk_size] for i in range(0, len(text), chunk_size)]
+# Collect supported corpus files from a file path or directory
+def collect_corpus_files(corpus_path: Path) -> list[Path]:
+
+    if corpus_path.is_file():
+        return [corpus_path]
+
+    files: list[Path] = []
+    for pattern in ("*.rst", "*.md", "*.txt"):
+        files.extend(sorted(corpus_path.rglob(pattern)))  # add to list of corpus files
+
+    return files
 
 
-def chunk_markdown_playbooks(text: str) -> List[str]:
-    lines = text.splitlines()
-    chunks: List[str] = []
-    current_title = ""
-    current_body: List[str] = []
+# Read corpus files and split them into chunked LangChain documents
+def build_documents(corpus_path: Path, chunk_size: int) -> list[Document]:
 
-    for line in lines:
-        if line.startswith("## "):
-            if current_title:
-                chunk = f"{current_title}\n" + "\n".join(current_body).strip()
-                chunks.append(chunk.strip())
-            current_title = line.strip()
-            current_body = []
-        else:
-            if current_title:
-                current_body.append(line)
+    files = collect_corpus_files(corpus_path)
 
-    if current_title:
-        chunk = f"{current_title}\n" + "\n".join(current_body).strip()
-        chunks.append(chunk.strip())
+    if not files:
+        raise ValueError(f"No corpus files found in: {corpus_path}")
 
-    return [chunk for chunk in chunks if chunk]
+    # Small overlap helps preserve context at chunk boundaries
+    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=80)  # KNOBS TO SET
+    docs: list[Document] = []
 
+    for file in files:
 
-def get_embedding_model(model_name: str) -> SentenceTransformer:
-    return SentenceTransformer(model_name)
+        text = file.read_text(encoding="utf-8")
+        chunks = splitter.split_text(text)  # CHUNKING STAGE
 
+        for i, chunk in enumerate(chunks):  # Store metadata of each chunk for ground truth
+            docs.append(
+                Document(
+                    page_content=chunk,
+                    metadata={"source": str(file), "chunk": i},
+                )
+            )
 
-def get_embeddings(embed_model: SentenceTransformer, text: str) -> List[float]:
-    return embed_model.encode(text, normalize_embeddings=False).tolist()
+    return docs
 
 
-def dot_product(vec1: Sequence[float], vec2: Sequence[float]) -> float:
-    return sum(a * b for a, b in zip(vec1, vec2))
+# Convert FAISS distance to an easy-to-read similarity-like score
+def similarity(distance: float) -> float:
+    return 1.0 / (1.0 + float(distance))
 
 
-def magnitude(vec: Sequence[float]) -> float:
-    return math.sqrt(sum(v**2 for v in vec))
+# Load a hardcoded fixture alert and serialize it for prompt context
+def load_alert_context() -> str:
+
+    project_root = Path(__file__).resolve().parents[1]
+    alert_path = project_root / ALERT_FIXTURE_PATH
+    payload = json.loads(alert_path.read_text(encoding="utf-8"))
+
+    return json.dumps(payload, indent=2)
 
 
-def cosine_similarity(vec1: Sequence[float], vec2: Sequence[float]) -> float:
-    dot_prod = dot_product(vec1, vec2)
-    mag_vec1 = magnitude(vec1)
-    mag_vec2 = magnitude(vec2)
-
-    if mag_vec1 == 0 or mag_vec2 == 0:
-        return 0.0
-
-    return dot_prod / (mag_vec1 * mag_vec2)
-
-
-def top_k_chunks(
-    query_embedding: Sequence[float],
-    chunk_embeddings: Sequence[Sequence[float]],
-    chunks: Sequence[str],
-    k: int,
-) -> List[Tuple[int, float, str]]:
-    ratings = [cosine_similarity(query_embedding, emb) for emb in chunk_embeddings]
-    k = min(k, len(ratings))
-    if k <= 0:
-        return []
-
-    idx = np.argpartition(ratings, -k)[-k:]
-    sorted_idx = sorted(idx.tolist(), key=lambda i: ratings[i], reverse=True)
-    return [(i, ratings[i], chunks[i]) for i in sorted_idx]
-
-
-def build_prompt(query: str, retrieved_chunks: Sequence[Tuple[int, float, str]]) -> str:
+# Render fallback prompt text when model generation is unavailable
+def render_prompt_preview(query: str, docs: list[Document]) -> str:
     context = "\n\n".join(
-        [f"[Chunk {i} | score={score:.4f}]\n{chunk}" for i, score, chunk in retrieved_chunks]
+        f"[source={d.metadata.get('source')} chunk={d.metadata.get('chunk')}]\n{d.page_content}"
+        for d in docs
     )
+    alert_context = load_alert_context()
+
     return (
-        "You are an incident response assistant. "
-        "A question will be asked and relevant information is provided. "
-        "Answer only using the provided information. "
-        "If the answer is not present, say you do not have enough context.\n\n"
+        "You are an incident response assistant."
+        "Answer only using the provided playbook context."
+        "If the answer is not in context, say you do not have enough context.\n\n"
         f"Question: {query}\n\n"
+        f"Alert Context (JSON):\n{alert_context}\n\n"
         f"Relevant Information:\n{context}\n"
     )
 
 
-def generate_prompt(prompt: str) -> str:
-    api_key = os.getenv("OPENAI_API_KEY") # Put your own API key in a .env file in the parent directory
+# Generate an answer from retrieved docs, or return prompt preview fallback
+def generate_answer(query: str, docs: list[Document]) -> str:
+    api_key = os.getenv("OPENAI_API_KEY")
+    alert_context = load_alert_context()
+
     if not api_key:
         return (
-            "OpenAI API key not found. Skipping model generation.\n\n"
-            "Prompt preview:\n"
-            f"{prompt}"
+            "OPENAI_API_KEY not found. Skipping generation.\n\nPrompt preview:\n"
+            f"{render_prompt_preview(query, docs)}"
         )
 
-    try:
-        from openai import OpenAI
-    except ImportError:
-        return (
-            "openai package not installed. Run `pip install openai` to enable generation.\n\n"
-            "Prompt preview:\n"
-            f"{prompt}"
-        )
-
-    client = OpenAI(api_key=api_key)
-    response = client.responses.create(
-        model="gpt-4.1-mini",
-        input=prompt,
-        temperature=0,
+    prompt = ChatPromptTemplate.from_template(
+        "You are an incident response assistant."
+        "Answer only using the provided playbook context."
+        "If the answer is not in context, say you do not have enough context.\n\n"
+        "Question: {input}\n\n"
+        "Alert Context (JSON):\n{alert_context}\n\n"
+        "Relevant Information:\n{context}"
     )
-    return response.output_text
+
+    llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0, api_key=api_key)
+    chain = create_stuff_documents_chain(llm, prompt)  # sends prompt to LLM and returns model output
+
+    return chain.invoke(
+        {"input": query, "alert_context": alert_context, "context": docs}
+    )  # query and context "stuffed" into prompt
 
 
-def main() -> None:
-    load_project_env()
+# Execute retrieval + generation for one query
+def run(query: str, corpus: Path, k: int, chunk_size: int, embedding_model: str) -> int:
+    docs = build_documents(corpus, chunk_size)
+    # Build a local vector index for semantic retrieval
+    embeddings = HuggingFaceEmbeddings(model_name=embedding_model)
+    vector_store = FAISS.from_documents(docs, embeddings)  # EMBEDDING STAGE
 
-    parser = argparse.ArgumentParser(description="Phase 0: simple RAG pipeline for IR context")
+    results = vector_store.similarity_search_with_score(query, k=k)  # SIMILARITY STAGE
+
+    top_docs = [doc for doc, _ in results]
+
+    print("\nTop chunks:")
+    for doc, dist in results:
+        print(
+            "- "
+            f"score={similarity(dist):.4f} "
+            f"source={doc.metadata.get('source')} "
+            f"chunk={doc.metadata.get('chunk')}"
+        )
+
+    print("\n=== Model Output ===\n")
+    print(generate_answer(query, top_docs))  # GENERATION STAGE
+
+    return 0
+
+
+# Create CLI parser for the minimal RAG pipeline
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Minimal IR RAG pipeline")
+    parser.add_argument("--query", required=True, help="Question to answer")
     parser.add_argument(
         "--corpus",
         type=Path,
-        default=Path("rag/corpus/playbook_response.md"),
-        help="Path to the source text corpus",
+        default=Path("rag/corpus"),
+        help="Corpus file or directory (default: rag/corpus)",
     )
-    parser.add_argument("--query", type=str, required=True, help="User question")
-    parser.add_argument("--chunk-size", type=int, default=400, help="Character chunk size")
-    parser.add_argument(
-        "--chunk-mode",
-        choices=["playbook", "char"],
-        default="playbook",
-        help="Chunking strategy: one chunk per markdown playbook section or fixed characters",
-    )
-    parser.add_argument("--k", type=int, default=4, help="Top-K chunks to retrieve")
+    parser.add_argument("--k", type=int, default=4, help="Top-k chunks to retrieve")
+    parser.add_argument("--chunk-size", type=int, default=700, help="Chunk size")
     parser.add_argument(
         "--embedding-model",
-        type=str,
         default="BAAI/bge-small-en-v1.5",
-        help="SentenceTransformer model name",
+        help="Embedding model name",
     )
-    args = parser.parse_args()
+    return parser
+
+
+# CLI entrypoint with path resolution and basic error handling
+def main() -> int:
+    load_env()
+    args = build_parser().parse_args()
 
     project_root = Path(__file__).resolve().parents[1]
-    corpus_path = args.corpus
-    if not corpus_path.is_absolute():
-        corpus_path = project_root / corpus_path
+    corpus = args.corpus if args.corpus.is_absolute() else project_root / args.corpus
 
-    text = read_text_file(corpus_path)
-    if args.chunk_mode == "playbook":
-        chunks = chunk_markdown_playbooks(text)
-        if not chunks:
-            chunks = chunk_text(text, args.chunk_size)
-    else:
-        chunks = chunk_text(text, args.chunk_size)
-
-    embed_model = get_embedding_model(args.embedding_model)
-    chunk_embeddings = [get_embeddings(embed_model, chunk) for chunk in chunks]
-
-    query_embedding = get_embeddings(embed_model, args.query)
-    retrieved = top_k_chunks(query_embedding, chunk_embeddings, chunks, args.k)
-
-    print("Top chunks:")
-    for i, score, _ in retrieved:
-        print(f"- chunk={i}, score={score:.4f}")
-
-    prompt = build_prompt(args.query, retrieved)
-    output = generate_prompt(prompt)
-
-    print("\n=== Model Output ===\n")
-    print(output)
+    try:
+        return run(
+            query=args.query,
+            corpus=corpus,
+            k=args.k,
+            chunk_size=args.chunk_size,
+            embedding_model=args.embedding_model,
+        )
+    except Exception as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
