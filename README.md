@@ -60,3 +60,20 @@ python scripts/IR_rag.py --query "..." --corpus rag/corpus --k 5 --chunk-size 70
 - Retrieval scores shown in output are a simple transformed value from FAISS distance (`1 / (1 + distance)`) for readability.
 - Alert JSON context is currently hardcoded in `scripts/IR_rag.py` via:
   - `ALERT_FIXTURE_PATH = Path(r"tests\\fixtures\\impossible_travel_alert.json")`
+
+## Limitations
+
+- The FAISS index is rebuilt on every run; there is no persisted index or warm start.
+- Retrieval currently uses top-k vector search only; there is no reranking stage.
+- Prompt context includes a single hardcoded alert fixture path instead of a runtime-selected alert file.
+- Corpus ingestion is local file-based only (`.rst`, `.md`, `.txt`) with no metadata filtering layer.
+- Grounding is best-effort via prompt instruction; there is no hard enforcement or citation validator.
+- The script is single-query CLI oriented and not structured as a multi-user service/API.
+
+## Evaluation Status (Current Gap)
+
+- There is no formal evaluation harness in this repository at this time.
+- No benchmark dataset is included for retrieval quality or answer quality scoring.
+- No automatic metrics are tracked yet (for example: recall@k, MRR, faithfulness, answer correctness).
+- No regression test suite currently validates output quality across corpus or prompt changes.
+- Model behavior is not calibrated with human-graded rubrics in this repo.
